@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>⚡ Энергия Вещает</title>
+  <title>⚡ Энергия Вещает v1.0.1</title>
   <style>
     :root {
       --bg: #ffffff;
@@ -372,7 +372,7 @@
   <div class="vpn-block" id="vpnBlock">
     <div class="icon">🛡️</div>
     <p>Пожалуйста, выключите VPN</p>
-    <p style="font-size:16px; color: var(--text-secondary);">Доступ разрешён только из России</p>
+    <p style="font-size:16px; color: var(--text-secondary);" id="vpnMessage">Доступ разрешён только из России</p>
   </div>
 
   <div id="app">
@@ -500,31 +500,131 @@
     const BUCKET_NAME = 'post-images';
 
     let userIp = null;
+    let userCountry = null;
 
+    // ========== НОВАЯ НАДЁЖНАЯ ПРОВЕРКА СТРАНЫ ==========
     async function checkGeo() {
-      try {
-        const resp = await fetch('https://ip-api.com/json/?fields=countryCode,query');
-        const data = await resp.json();
-        if (data && data.query) {
-          userIp = data.query;
-          if (data.countryCode && data.countryCode !== 'RU') {
-            document.getElementById('vpnBlock').style.display = 'flex';
-            document.getElementById('app').style.display = 'none';
-            document.getElementById('createPostBtn').style.display = 'none';
-            return false;
-          }
+      const services = [
+        {
+          url: 'https://ip-api.com/json/?fields=countryCode,query',
+          parser: (json) => ({ ip: json.query, country: json.countryCode })
+        },
+        {
+          url: 'https://ipapi.co/json/',
+          parser: (json) => ({ ip: json.ip, country: json.country_code })
+        },
+        {
+          url: 'https://ipwho.is/',
+          parser: (json) => ({ ip: json.ip, country: json.country_code })
+        },
+        {
+          url: 'https://freeipapi.com/api/json',
+          parser: (json) => ({ ip: json.ipAddress, country: json.countryCode })
+        },
+        {
+          url: 'https://api.ipgeolocation.io/ipgeo?apiKey=',
+          parser: null // этот сервис без ключа не используем, но можно вставить свой ключ
         }
-      } catch (e) {
-        // если сервис недоступен – пропускаем
+      ];
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3 секунды на гео-проверку
+
+      const fetchPromises = services
+        .filter(s => s.parser !== null)
+        .map(async ({ url, parser }) => {
+          try {
+            const resp = await fetch(url, { signal: controller.signal });
+            const json = await resp.json();
+            return parser(json);
+          } catch {
+            return null;
+          }
+        });
+
+      const results = await Promise.allSettled(fetchPromises);
+      clearTimeout(timeout);
+
+      let geoData = null;
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value && result.value.ip) {
+          geoData = result.value;
+          break;
+        }
       }
+
+      if (geoData) {
+        userIp = geoData.ip;
+        userCountry = geoData.country;
+        if (userCountry && userCountry !== 'RU') {
+          showVpnBlock('Доступ разрешён только из России');
+          return false;
+        }
+      } else {
+        // Ни один сервис не ответил – возможен VPN или блокировка
+        showVpnBlock('Не удалось проверить местоположение. Отключите VPN.');
+        return false;
+      }
+
+      // Успешная проверка
       document.getElementById('vpnBlock').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('createPostBtn').style.display = 'flex';
       return true;
     }
 
+    function showVpnBlock(message) {
+      document.getElementById('vpnBlock').style.display = 'flex';
+      document.getElementById('vpnMessage').textContent = message;
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('createPostBtn').style.display = 'none';
+    }
+
+    // ========== IP ДЛЯ ОТПРАВКИ (с мультисервисностью) ==========
+    async function getIp() {
+      if (userIp) return userIp;
+      const services = [
+        { url: 'https://api.ipify.org?format=json', parser: (d) => d.ip },
+        { url: 'https://api64.ipify.org?format=json', parser: (d) => d.ip },
+        { url: 'https://api.my-ip.io/ip.json', parser: (d) => d.ip },
+        { url: 'https://checkip.amazonaws.com', parser: (text) => text.trim() },
+        { url: 'https://icanhazip.com', parser: (text) => text.trim() }
+      ];
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1000);
+
+      const fetchPromises = services.map(async ({ url, parser }) => {
+        try {
+          const resp = await fetch(url, { signal: controller.signal });
+          const contentType = resp.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const json = await resp.json();
+            return parser(json);
+          } else {
+            const text = await resp.text();
+            return parser(text);
+          }
+        } catch {
+          return null;
+        }
+      });
+
+      const results = await Promise.allSettled(fetchPromises);
+      clearTimeout(timeout);
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value && result.value !== '') {
+          userIp = result.value;
+          return userIp;
+        }
+      }
+      userIp = 'неизвестно';
+      return userIp;
+    }
+
     async function isIpBanned(ip) {
-      if (!ip) return false;
+      if (!ip || ip === 'неизвестно') return false;
       try {
         const { data } = await supabase.from('banned_ips').select('ip').eq('ip', ip).single();
         return !!data;
@@ -543,16 +643,6 @@
         localStorage.setItem('device_fp', fp);
       }
       return fp;
-    }
-
-    async function getIp() {
-      if (userIp) return userIp;
-      try {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const data = await res.json();
-        userIp = data.ip;
-        return userIp;
-      } catch { return 'неизвестно'; }
     }
 
     async function collectSubmitterInfo() {
@@ -810,7 +900,6 @@
       showModal(adminPanelModal);
 
       try {
-        // Параллельно загружаем непроверенные и одобренные посты
         const [unapprovedRes, approvedRes] = await Promise.all([
           supabase.from('messages').select('*').eq('approved', false).order('created_at', { ascending: false }),
           supabase.from('messages').select('*').eq('approved', true).is('parent_id', null).order('created_at', { ascending: false })
@@ -819,7 +908,6 @@
         const unapproved = unapprovedRes.data || [];
         const approvedPosts = approvedRes.data || [];
 
-        // Собираем parent_id комментариев для массовой загрузки
         const parentIds = [...new Set(unapproved.filter(item => item.parent_id).map(item => item.parent_id))];
         let parentPostsMap = {};
         if (parentIds.length > 0) {
@@ -834,7 +922,6 @@
 
         adminItemsList.innerHTML = '';
 
-        // Секция непроверенных
         if (unapproved.length > 0) {
           const sectionTitle = document.createElement('div');
           sectionTitle.style.fontWeight = '600';
@@ -924,7 +1011,6 @@
           adminItemsList.appendChild(empty);
         }
 
-        // Секция управления постами
         if (approvedPosts.length > 0) {
           const divider = document.createElement('hr');
           divider.style.margin = '20px 0';
@@ -962,7 +1048,7 @@
             div.querySelector('.toggle-pin-btn').addEventListener('click', async () => {
               const newPinned = !(post.pinned);
               await supabase.from('messages').update({ pinned: newPinned }).eq('id', post.id);
-              post.pinned = newPinned; // локально обновим
+              post.pinned = newPinned;
               await showAdminPanel();
               await refreshCurrentFeed();
             });
@@ -975,7 +1061,6 @@
           }
         }
 
-        // Копирование текста
         document.querySelectorAll('.copy-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const text = btn.dataset.text;
@@ -990,7 +1075,6 @@
       }
     }
 
-    // Кнопка создания поста – теперь без проверки бана, только мгновенное открытие
     createPostBtn.addEventListener('click', () => {
       newPostText.value = '';
       postImageFile.current = null;
@@ -1127,6 +1211,8 @@
       const allowed = await checkGeo();
       if (allowed) {
         loadHome();
+      } else {
+        // Если VPN определяется, покажем блок и остановимся
       }
     })();
   </script>
