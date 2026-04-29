@@ -297,6 +297,11 @@
       box-shadow: 0 6px 14px var(--glow);
       transform: translateY(-1px);
     }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
     .btn-secondary { background: #9e9e9e; }
     .btn-danger { background: #e53935; }
     .btn-success { background: #2e7d32; }
@@ -502,7 +507,6 @@
     let userIp = null;
     let userCountry = null;
 
-    // ========== ИСПРАВЛЕННАЯ ПРОВЕРКА СТРАНЫ (БЕЗ ЛОЖНЫХ БЛОКИРОВОК) ==========
     async function checkGeo() {
       const services = [
         {
@@ -540,7 +544,6 @@
       }
 
       if (!geoData) {
-        // Ни один сервис не ответил – доступ открыт, не блокируем
         userIp = null;
         userCountry = null;
         document.getElementById('vpnBlock').style.display = 'none';
@@ -557,7 +560,6 @@
         return false;
       }
 
-      // RU или страна не определена (но сервис ответил) – открыто
       document.getElementById('vpnBlock').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('createPostBtn').style.display = 'flex';
@@ -571,7 +573,6 @@
       document.getElementById('createPostBtn').style.display = 'none';
     }
 
-    // ========== IP ДЛЯ ОТПРАВКИ (мультисервисный, таймаут 1 сек) ==========
     async function getIp() {
       if (userIp) return userIp;
       const services = [
@@ -634,11 +635,6 @@
         localStorage.setItem('device_fp', fp);
       }
       return fp;
-    }
-
-    async function collectSubmitterInfo() {
-      const ip = await getIp();
-      return { ip, ua: navigator.userAgent, fingerprint: getFingerprint() };
     }
 
     async function uploadImage(file) {
@@ -1085,28 +1081,40 @@
     });
     cancelAdminBtn.addEventListener('click', () => hideModal(adminModal));
 
+    // ========== ИСПРАВЛЕННАЯ ОТПРАВКА ПОСТА ==========
     submitPostBtn.addEventListener('click', async () => {
       const text = newPostText.value.trim();
       if (!text && !postImageFile.current) {
         alert('Напишите текст или добавьте фото');
         return;
       }
-      const ip = await getIp();
-      if (await isIpBanned(ip)) {
-        alert('Вы забанены');
-        return;
-      }
-      let imageUrl = null;
-      if (postImageFile.current) {
-        try {
-          imageUrl = await uploadImage(postImageFile.current);
-        } catch (e) {
-          alert(e.message);
+      
+      submitPostBtn.disabled = true;
+      submitPostBtn.textContent = 'Отправка...';
+      
+      try {
+        const ip = await getIp();
+        if (await isIpBanned(ip)) {
+          alert('Вы забанены');
+          submitPostBtn.disabled = false;
+          submitPostBtn.textContent = 'Отправить анонимно';
           return;
         }
-      }
-      const info = await collectSubmitterInfo();
-      try {
+        
+        let imageUrl = null;
+        if (postImageFile.current) {
+          try {
+            imageUrl = await uploadImage(postImageFile.current);
+          } catch (e) {
+            alert(e.message);
+            submitPostBtn.disabled = false;
+            submitPostBtn.textContent = 'Отправить анонимно';
+            return;
+          }
+        }
+        
+        const info = { ip, ua: navigator.userAgent, fingerprint: getFingerprint() };
+        
         const { error: insertError } = await supabase.from('messages').insert([{
           text: text || '',
           approved: false,
@@ -1115,49 +1123,79 @@
           submitter_fingerprint: info.fingerprint,
           image_url: imageUrl
         }]);
+        
         if (insertError) {
           alert('Ошибка при сохранении поста: ' + insertError.message);
+          submitPostBtn.disabled = false;
+          submitPostBtn.textContent = 'Отправить анонимно';
           return;
         }
+        
+        newPostText.value = '';
+        postImageFile.current = null;
+        postImageInput.value = '';
+        postImagePreview.style.display = 'none';
+        
         hideModal(createPostModal);
+        
         if (currentTab === 'home') loadHome();
+        
       } catch (e) {
         alert('Ошибка сети при отправке поста');
+      } finally {
+        submitPostBtn.disabled = false;
+        submitPostBtn.textContent = 'Отправить анонимно';
       }
     });
     cancelPostBtn.addEventListener('click', () => hideModal(createPostModal));
 
+    // ========== ИСПРАВЛЕННАЯ ОТПРАВКА КОММЕНТАРИЯ ==========
     submitCommentBtn.addEventListener('click', async () => {
       const text = newCommentText.value.trim();
       if (!text && !commentImageFile.current) {
         alert('Напишите текст или добавьте фото');
         return;
       }
-      const ip = await getIp();
-      if (await isIpBanned(ip)) {
-        alert('Вы забанены');
-        return;
-      }
-      const { data: parentPost } = await supabase
-        .from('messages')
-        .select('locked')
-        .eq('id', currentPostId)
-        .single();
-      if (parentPost && parentPost.locked) {
-        alert('Комментарии к этому посту отключены');
-        return;
-      }
-      let imageUrl = null;
-      if (commentImageFile.current) {
-        try {
-          imageUrl = await uploadImage(commentImageFile.current);
-        } catch (e) {
-          alert(e.message);
+      
+      submitCommentBtn.disabled = true;
+      submitCommentBtn.textContent = 'Отправка...';
+      
+      try {
+        const ip = await getIp();
+        if (await isIpBanned(ip)) {
+          alert('Вы забанены');
+          submitCommentBtn.disabled = false;
+          submitCommentBtn.textContent = 'Отправить';
           return;
         }
-      }
-      const info = await collectSubmitterInfo();
-      try {
+        
+        const { data: parentPost } = await supabase
+          .from('messages')
+          .select('locked')
+          .eq('id', currentPostId)
+          .single();
+        
+        if (parentPost && parentPost.locked) {
+          alert('Комментарии к этому посту отключены');
+          submitCommentBtn.disabled = false;
+          submitCommentBtn.textContent = 'Отправить';
+          return;
+        }
+        
+        let imageUrl = null;
+        if (commentImageFile.current) {
+          try {
+            imageUrl = await uploadImage(commentImageFile.current);
+          } catch (e) {
+            alert(e.message);
+            submitCommentBtn.disabled = false;
+            submitCommentBtn.textContent = 'Отправить';
+            return;
+          }
+        }
+        
+        const info = { ip, ua: navigator.userAgent, fingerprint: getFingerprint() };
+        
         const { error: insertError } = await supabase.from('messages').insert([{
           text: text || '',
           parent_id: currentPostId,
@@ -1167,17 +1205,26 @@
           submitter_fingerprint: info.fingerprint,
           image_url: imageUrl
         }]);
+        
         if (insertError) {
           alert('Ошибка при сохранении комментария: ' + insertError.message);
+          submitCommentBtn.disabled = false;
+          submitCommentBtn.textContent = 'Отправить';
           return;
         }
+        
         newCommentText.value = '';
         commentImageFile.current = null;
         commentImageInput.value = '';
         commentImagePreview.style.display = 'none';
+        
         loadComments(currentPostId);
+        
       } catch (e) {
         alert('Ошибка сети при отправке комментария');
+      } finally {
+        submitCommentBtn.disabled = false;
+        submitCommentBtn.textContent = 'Отправить';
       }
     });
     closeDetailBtn.addEventListener('click', () => hideModal(postDetailModal));
@@ -1202,8 +1249,6 @@
       const allowed = await checkGeo();
       if (allowed) {
         loadHome();
-      } else {
-        // Заглушка VPN уже показана
       }
     })();
   </script>
