@@ -50,7 +50,6 @@
       position: relative;
     }
 
-    /* VPN заглушка */
     .vpn-block {
       display: none;
       flex-direction: column;
@@ -453,14 +452,17 @@
       <hr style="border: 1px solid var(--border); margin: 16px 0;">
       <div class="modal-title" style="font-size: 18px;">Комментарии</div>
       <div id="commentsList" style="margin-bottom: 16px;"></div>
-      <textarea class="modal-input" id="newCommentText" rows="2" placeholder="Анонимный комментарий..."></textarea>
-      <label class="file-input-label" for="commentImageInput">📎 Фото</label>
-      <input type="file" id="commentImageInput" accept="image/*">
-      <div id="commentImagePreview" class="image-preview" style="display:none;">
-        <img id="commentPreviewImg" src="" alt="Предпросмотр">
-        <button class="remove-image-btn" id="removeCommentImageBtn">✕</button>
+      <div id="commentFormBlock">
+        <textarea class="modal-input" id="newCommentText" rows="2" placeholder="Анонимный комментарий..."></textarea>
+        <label class="file-input-label" for="commentImageInput">📎 Фото</label>
+        <input type="file" id="commentImageInput" accept="image/*">
+        <div id="commentImagePreview" class="image-preview" style="display:none;">
+          <img id="commentPreviewImg" src="" alt="Предпросмотр">
+          <button class="remove-image-btn" id="removeCommentImageBtn">✕</button>
+        </div>
+        <button class="btn" id="submitCommentBtn" style="margin-top: 8px;">Отправить</button>
       </div>
-      <button class="btn" id="submitCommentBtn" style="margin-top: 8px;">Отправить</button>
+      <div id="commentsLockedMsg" style="display:none; color: var(--text-secondary); margin-top: 12px;">Комментарии отключены</div>
       <button class="btn btn-secondary" id="closeDetailBtn" style="margin-top: 8px; margin-left: 8px;">Закрыть</button>
     </div>
   </div>
@@ -488,17 +490,15 @@
   </div>
 
   <script type="module">
-    // ==================== КОНФИГУРАЦИЯ ====================
     const SUPABASE_URL = 'https://jsfgmzsypmbnvvthbvbh.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_JCzEET-XQtIa90ovm3GKOw_feSE9nYV';
-    const ADMIN_PASSWORD = 'R3dF0x-Jump$OverTh3M00n1784skdjf'; // Сложный пароль – можешь поменять
+    const ADMIN_PASSWORD = 'R3dF0x-Jump$OverTh3M00n1784skdjf';
 
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const BUCKET_NAME = 'post-images';
 
-    // ========== ГЕО‑ПРОВЕРКА И БАН ==========
     let userIp = null;
     async function checkGeo() {
       try {
@@ -562,10 +562,7 @@
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(fileName, file, { cacheControl: '3600', upsert: false });
-      if (error) {
-        console.error('Ошибка загрузки:', error);
-        throw new Error(`Ошибка загрузки: ${error.message || 'неизвестная ошибка'}`);
-      }
+      if (error) throw new Error(`Ошибка загрузки: ${error.message || 'неизвестная ошибка'}`);
       const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
       return urlData.publicUrl;
     }
@@ -594,8 +591,9 @@
     const settingsModal = $('#settingsModal');
     const darkThemeToggle = $('#darkThemeToggle');
     const closeSettingsBtn = $('#closeSettingsBtn');
+    const commentFormBlock = $('#commentFormBlock');
+    const commentsLockedMsg = $('#commentsLockedMsg');
 
-    // Элементы фото
     const postImageInput = $('#postImageInput');
     const postImagePreview = $('#postImagePreview');
     const postPreviewImg = $('#postPreviewImg');
@@ -665,7 +663,7 @@
         .select('*')
         .is('parent_id', null)
         .eq('approved', true)
-        .order('pinned', { ascending: false })   // закреплённые первыми
+        .order('pinned', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) {
         feed.innerHTML = '<div class="empty-message">Ошибка загрузки</div>';
@@ -739,6 +737,14 @@
         ${imgHtml}
         <div style="font-size: 12px; color: var(--text-secondary);">${new Date(post.created_at).toLocaleString('ru-RU')}</div>
       `;
+      // Проверяем locked
+      if (post.locked) {
+        commentFormBlock.style.display = 'none';
+        commentsLockedMsg.style.display = 'block';
+      } else {
+        commentFormBlock.style.display = 'block';
+        commentsLockedMsg.style.display = 'none';
+      }
       await loadComments(postId);
       showModal(postDetailModal);
     }
@@ -793,14 +799,14 @@
     }
 
     async function showAdminPanel() {
-      // Загружаем непроверенные записи
+      // Непроверенные записи (все: посты и комментарии)
       const { data: unapproved } = await supabase
         .from('messages')
         .select('*')
         .eq('approved', false)
         .order('created_at', { ascending: false });
 
-      // Загружаем все одобренные посты для управления закреплением
+      // Одобренные посты для управления
       const { data: approvedPosts } = await supabase
         .from('messages')
         .select('*')
@@ -825,10 +831,32 @@
           const imgHtml = item.image_url
             ? `<div><img src="${escapeHtml(item.image_url)}" style="max-width:200px; max-height:150px; border-radius:8px; margin-top:6px;"/></div>`
             : '';
+
+          let parentInfo = '';
+          if (item.parent_id) {
+            // Загружаем родительский пост для отображения
+            const { data: parentPost } = await supabase
+              .from('messages')
+              .select('text, created_at')
+              .eq('id', item.parent_id)
+              .single();
+            if (parentPost) {
+              parentInfo = `
+                <div style="font-size:12px; color:var(--primary); margin-top:4px; background:var(--input-bg); padding:6px; border-radius:8px;">
+                  <strong>К посту:</strong> ${escapeHtml(parentPost.text).substring(0, 80)}
+                  <span style="display:block; font-size:10px; color:var(--text-secondary);">${new Date(parentPost.created_at).toLocaleString('ru-RU')}</span>
+                </div>
+              `;
+            } else {
+              parentInfo = '<div style="font-size:12px; color:var(--text-secondary);">(пост удалён)</div>';
+            }
+          }
+
           div.innerHTML = `
             <div style="font-weight:600;">${item.parent_id ? '💬 Комментарий' : '📝 Пост'}</div>
             <div>${escapeHtml(item.text)}</div>
             ${imgHtml}
+            ${parentInfo}
             <div style="font-size:12px; color:var(--text-secondary);">${new Date(item.created_at).toLocaleString('ru-RU')}</div>
             <div class="submitter-info" style="margin-top:6px; font-size:12px; background:var(--input-bg); padding:8px; border-radius:8px;">
               <div><strong>IP:</strong> ${item.submitter_ip || '—'}
@@ -881,33 +909,38 @@
         adminItemsList.appendChild(empty);
       }
 
-      // Секция управления закреплениями (одобренные посты)
+      // Секция управления постами (закрепление и блокировка комментариев)
       if (approvedPosts && approvedPosts.length > 0) {
         const divider = document.createElement('hr');
         divider.style.margin = '20px 0';
         divider.style.border = '1px solid var(--border)';
         adminItemsList.appendChild(divider);
 
-        const pinTitle = document.createElement('div');
-        pinTitle.style.fontWeight = '600';
-        pinTitle.style.marginBottom = '8px';
-        pinTitle.textContent = '📌 Управление закреплениями';
-        adminItemsList.appendChild(pinTitle);
+        const manageTitle = document.createElement('div');
+        manageTitle.style.fontWeight = '600';
+        manageTitle.style.marginBottom = '8px';
+        manageTitle.textContent = '📌 Управление постами';
+        adminItemsList.appendChild(manageTitle);
 
         for (const post of approvedPosts) {
           const div = document.createElement('div');
-          div.className = 'pin-item';
+          div.className = 'manage-item';
           div.style.border = '1px solid var(--border)';
           div.style.borderRadius = '12px';
           div.style.padding = '12px';
           div.style.marginBottom = '8px';
           div.style.background = 'var(--card)';
           div.innerHTML = `
-            <div style="font-weight:600;">${post.pinned ? '📌 Закреплено' : '📝 Пост'}</div>
+            <div style="font-weight:600;">${post.pinned ? '📌 Закреплено' : '📝 Пост'} ${post.locked ? '🔒' : ''}</div>
             <div>${escapeHtml(post.text).substring(0, 100)}</div>
-            <button class="btn ${post.pinned ? 'btn-secondary' : 'btn-success'} toggle-pin-btn" data-id="${post.id}" data-pinned="${post.pinned}">
-              ${post.pinned ? 'Открепить' : 'Закрепить'}
-            </button>
+            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+              <button class="btn ${post.pinned ? 'btn-secondary' : 'btn-success'} toggle-pin-btn" data-id="${post.id}" data-pinned="${post.pinned}">
+                ${post.pinned ? 'Открепить' : 'Закрепить'}
+              </button>
+              <button class="btn ${post.locked ? 'btn-success' : 'btn-secondary'} toggle-lock-btn" data-id="${post.id}" data-locked="${post.locked}">
+                ${post.locked ? 'Разрешить комменты' : 'Запретить комменты'}
+              </button>
+            </div>
           `;
           adminItemsList.appendChild(div);
 
@@ -915,14 +948,20 @@
           togglePinBtn.addEventListener('click', async () => {
             const newPinned = !(togglePinBtn.dataset.pinned === 'true');
             await supabase.from('messages').update({ pinned: newPinned }).eq('id', post.id);
-            // Обновим текущую панель
             await showAdminPanel();
             await refreshCurrentFeed();
+          });
+
+          const toggleLockBtn = div.querySelector('.toggle-lock-btn');
+          toggleLockBtn.addEventListener('click', async () => {
+            const newLocked = !(toggleLockBtn.dataset.locked === 'true');
+            await supabase.from('messages').update({ locked: newLocked }).eq('id', post.id);
+            await showAdminPanel();
+            // Обновлять ленту не обязательно, но можно
           });
         }
       }
 
-      // Копирование текста
       document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const text = btn.dataset.text;
@@ -1007,6 +1046,16 @@
       const ip = await getIp();
       if (await isIpBanned(ip)) {
         alert('Вы забанены');
+        return;
+      }
+      // Проверим locked статус поста
+      const { data: parentPost } = await supabase
+        .from('messages')
+        .select('locked')
+        .eq('id', currentPostId)
+        .single();
+      if (parentPost && parentPost.locked) {
+        alert('Комментарии к этому посту отключены');
         return;
       }
       let imageUrl = null;
