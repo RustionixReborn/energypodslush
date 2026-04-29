@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>⚡ЭЭнергия Вещает v1.0.1</title>
+  <title>⚡ Энергия Вещает</title>
   <style>
     :root {
       --bg: #ffffff;
@@ -502,7 +502,7 @@
     let userIp = null;
     let userCountry = null;
 
-    // ========== НОВАЯ НАДЁЖНАЯ ПРОВЕРКА СТРАНЫ ==========
+    // ========== ИСПРАВЛЕННАЯ ПРОВЕРКА СТРАНЫ (БЕЗ ЛОЖНЫХ БЛОКИРОВОК) ==========
     async function checkGeo() {
       const services = [
         {
@@ -512,35 +512,21 @@
         {
           url: 'https://ipapi.co/json/',
           parser: (json) => ({ ip: json.ip, country: json.country_code })
-        },
-        {
-          url: 'https://ipwho.is/',
-          parser: (json) => ({ ip: json.ip, country: json.country_code })
-        },
-        {
-          url: 'https://freeipapi.com/api/json',
-          parser: (json) => ({ ip: json.ipAddress, country: json.countryCode })
-        },
-        {
-          url: 'https://api.ipgeolocation.io/ipgeo?apiKey=',
-          parser: null // этот сервис без ключа не используем, но можно вставить свой ключ
         }
       ];
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000); // 3 секунды на гео-проверку
+      const timeout = setTimeout(() => controller.abort(), 2000);
 
-      const fetchPromises = services
-        .filter(s => s.parser !== null)
-        .map(async ({ url, parser }) => {
-          try {
-            const resp = await fetch(url, { signal: controller.signal });
-            const json = await resp.json();
-            return parser(json);
-          } catch {
-            return null;
-          }
-        });
+      const fetchPromises = services.map(async ({ url, parser }) => {
+        try {
+          const resp = await fetch(url, { signal: controller.signal });
+          const json = await resp.json();
+          return parser(json);
+        } catch {
+          return null;
+        }
+      });
 
       const results = await Promise.allSettled(fetchPromises);
       clearTimeout(timeout);
@@ -553,20 +539,25 @@
         }
       }
 
-      if (geoData) {
-        userIp = geoData.ip;
-        userCountry = geoData.country;
-        if (userCountry && userCountry !== 'RU') {
-          showVpnBlock('Доступ разрешён только из России');
-          return false;
-        }
-      } else {
-        // Ни один сервис не ответил – возможен VPN или блокировка
-        showVpnBlock('Не удалось проверить местоположение. Отключите VPN.');
+      if (!geoData) {
+        // Ни один сервис не ответил – доступ открыт, не блокируем
+        userIp = null;
+        userCountry = null;
+        document.getElementById('vpnBlock').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        document.getElementById('createPostBtn').style.display = 'flex';
+        return true;
+      }
+
+      userIp = geoData.ip;
+      userCountry = geoData.country;
+
+      if (userCountry && userCountry !== 'RU') {
+        showVpnBlock('Доступ разрешён только из России');
         return false;
       }
 
-      // Успешная проверка
+      // RU или страна не определена (но сервис ответил) – открыто
       document.getElementById('vpnBlock').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
       document.getElementById('createPostBtn').style.display = 'flex';
@@ -580,7 +571,7 @@
       document.getElementById('createPostBtn').style.display = 'none';
     }
 
-    // ========== IP ДЛЯ ОТПРАВКИ (с мультисервисностью) ==========
+    // ========== IP ДЛЯ ОТПРАВКИ (мультисервисный, таймаут 1 сек) ==========
     async function getIp() {
       if (userIp) return userIp;
       const services = [
@@ -1212,7 +1203,7 @@
       if (allowed) {
         loadHome();
       } else {
-        // Если VPN определяется, покажем блок и остановимся
+        // Заглушка VPN уже показана
       }
     })();
   </script>
