@@ -94,6 +94,7 @@
       color: var(--text);
       transition: all 0.2s;
       border: 1px solid transparent;
+      text-decoration: none;
     }
     .nav-item:hover, .nav-item.active {
       background: var(--primary);
@@ -346,6 +347,49 @@
     }
     .file-input-label input { display: none; }
 
+    /* Блоки для вкладки Найти */
+    .search-blocks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding-bottom: 80px;
+    }
+    .search-block {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 18px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    .search-block.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .search-block:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 25px var(--glow);
+      transform: translateY(-3px);
+    }
+    .search-block .block-icon svg {
+      width: 40px;
+      height: 40px;
+      stroke: var(--text);
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      margin-bottom: 10px;
+    }
+    .search-block .block-title {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
     .rules p { margin-bottom: 12px; }
 
     @media (max-width: 768px) {
@@ -367,6 +411,10 @@
         padding: 8px 10px;
       }
       .bottom-nav .nav-item svg { width: 22px; height: 22px; }
+      .fab {
+        width: 52px; height: 52px;
+        bottom: 80px; right: 16px;
+      }
     }
     @media (min-width: 769px) {
       .bottom-nav { display: none; }
@@ -377,7 +425,7 @@
   <div class="vpn-block" id="vpnBlock">
     <div class="icon">🛡️</div>
     <p>Пожалуйста, выключите VPN</p>
-    <p style="font-size:16px; color: var(--text-secondary);" id="vpnMessage">Доступ разрешён только из России</p>
+    <p id="vpnMessage">Доступ разрешён только из России</p>
   </div>
 
   <div id="app">
@@ -386,13 +434,9 @@
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         Главная
       </div>
-      <div class="nav-item" data-tab="rules">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Правила
-      </div>
-      <div class="nav-item" data-tab="moderation">
-        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Модерация
+      <div class="nav-item" data-tab="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Найти
       </div>
     </nav>
 
@@ -409,13 +453,9 @@
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         Главная
       </div>
-      <div class="nav-item" data-tab="rules">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
-        Правила
-      </div>
-      <div class="nav-item" data-tab="moderation">
-        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Модер.
+      <div class="nav-item" data-tab="search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Найти
       </div>
     </nav>
   </div>
@@ -423,17 +463,6 @@
   <button class="fab" id="createPostBtn">✚</button>
 
   <!-- Модалки -->
-  <div class="modal" id="adminModal">
-    <div class="modal-content">
-      <div class="modal-title">Вход для модерации</div>
-      <input type="password" class="modal-input" id="adminPassInput" placeholder="Пароль">
-      <div class="modal-buttons">
-        <button class="btn btn-secondary" id="cancelAdminBtn">Отмена</button>
-        <button class="btn" id="submitAdminBtn">Войти</button>
-      </div>
-    </div>
-  </div>
-
   <div class="modal" id="createPostModal">
     <div class="modal-content">
       <div class="modal-title">Новый пост</div>
@@ -472,14 +501,6 @@
     </div>
   </div>
 
-  <div class="modal" id="adminPanelModal">
-    <div class="modal-content" style="max-width: 600px;">
-      <div class="modal-title">Модерация</div>
-      <div id="adminItemsList"></div>
-      <button class="btn btn-secondary" id="closeAdminPanelBtn" style="margin-top: 16px;">Закрыть</button>
-    </div>
-  </div>
-
   <div class="modal" id="settingsModal">
     <div class="modal-content">
       <div class="modal-title">Настройки</div>
@@ -497,135 +518,40 @@
   <script type="module">
     const SUPABASE_URL = 'https://jsfgmzsypmbnvvthbvbh.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_JCzEET-XQtIa90ovm3GKOw_feSE9nYV';
-    const ADMIN_PASSWORD = 'R3dF0x-Jump$OverTh3M00n1784skdjf';
 
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const BUCKET_NAME = 'post-images';
-
     let userIp = null;
-    let userCountry = null;
 
     async function checkGeo() {
-      const services = [
-        {
-          url: 'https://ip-api.com/json/?fields=countryCode,query',
-          parser: (json) => ({ ip: json.query, country: json.countryCode })
-        },
-        {
-          url: 'https://ipapi.co/json/',
-          parser: (json) => ({ ip: json.ip, country: json.country_code })
+      try {
+        const resp = await fetch('https://ip-api.com/json/?fields=countryCode,query');
+        const data = await resp.json();
+        if (data && data.query) {
+          userIp = data.query;
+          if (data.countryCode && data.countryCode !== 'RU') {
+            document.getElementById('vpnBlock').style.display = 'flex';
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('createPostBtn').style.display = 'none';
+            return false;
+          }
         }
-      ];
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000);
-
-      const fetchPromises = services.map(async ({ url, parser }) => {
-        try {
-          const resp = await fetch(url, { signal: controller.signal });
-          const json = await resp.json();
-          return parser(json);
-        } catch {
-          return null;
-        }
-      });
-
-      const results = await Promise.allSettled(fetchPromises);
-      clearTimeout(timeout);
-
-      let geoData = null;
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value && result.value.ip) {
-          geoData = result.value;
-          break;
-        }
-      }
-
-      if (!geoData) {
-        userIp = null;
-        userCountry = null;
-        document.getElementById('vpnBlock').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
-        document.getElementById('createPostBtn').style.display = 'flex';
-        return true;
-      }
-
-      userIp = geoData.ip;
-      userCountry = geoData.country;
-
-      if (userCountry && userCountry !== 'RU') {
-        showVpnBlock('Доступ разрешён только из России');
-        return false;
-      }
-
+      } catch (e) {}
       document.getElementById('vpnBlock').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
-      document.getElementById('createPostBtn').style.display = 'flex';
       return true;
-    }
-
-    function showVpnBlock(message) {
-      document.getElementById('vpnBlock').style.display = 'flex';
-      document.getElementById('vpnMessage').textContent = message;
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('createPostBtn').style.display = 'none';
     }
 
     async function getIp() {
       if (userIp) return userIp;
-      const services = [
-        { url: 'https://api.ipify.org?format=json', parser: (d) => d.ip },
-        { url: 'https://api64.ipify.org?format=json', parser: (d) => d.ip },
-        { url: 'https://api.my-ip.io/ip.json', parser: (d) => d.ip },
-        { url: 'https://checkip.amazonaws.com', parser: (text) => text.trim() },
-        { url: 'https://icanhazip.com', parser: (text) => text.trim() }
-      ];
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1000);
-
-      const fetchPromises = services.map(async ({ url, parser }) => {
-        try {
-          const resp = await fetch(url, { signal: controller.signal });
-          const contentType = resp.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const json = await resp.json();
-            return parser(json);
-          } else {
-            const text = await resp.text();
-            return parser(text);
-          }
-        } catch {
-          return null;
-        }
-      });
-
-      const results = await Promise.allSettled(fetchPromises);
-      clearTimeout(timeout);
-
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value && result.value !== '') {
-          userIp = result.value;
-          return userIp;
-        }
-      }
-      userIp = 'неизвестно';
-      return userIp;
-    }
-
-    async function isIpBanned(ip) {
-      if (!ip || ip === 'неизвестно') return false;
       try {
-        const { data } = await supabase.from('banned_ips').select('ip').eq('ip', ip).single();
-        return !!data;
-      } catch { return false; }
-    }
-
-    async function banIp(ip) {
-      if (!ip) return;
-      await supabase.from('banned_ips').upsert({ ip });
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        userIp = data.ip;
+        return userIp;
+      } catch { return 'неизвестно'; }
     }
 
     function getFingerprint() {
@@ -644,7 +570,7 @@
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(fileName, file, { cacheControl: '3600', upsert: false });
-      if (error) throw new Error(`Ошибка загрузки: ${error.message || 'неизвестная ошибка'}`);
+      if (error) throw new Error(`Ошибка загрузки: ${error.message}`);
       const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
       return urlData.publicUrl;
     }
@@ -653,10 +579,6 @@
     const feed = $('#feed');
     const createPostBtn = $('#createPostBtn');
     const settingsBtn = $('#settingsBtn');
-    const adminModal = $('#adminModal');
-    const adminPassInput = $('#adminPassInput');
-    const submitAdminBtn = $('#submitAdminBtn');
-    const cancelAdminBtn = $('#cancelAdminBtn');
     const createPostModal = $('#createPostModal');
     const newPostText = $('#newPostText');
     const submitPostBtn = $('#submitPostBtn');
@@ -667,15 +589,11 @@
     const newCommentText = $('#newCommentText');
     const submitCommentBtn = $('#submitCommentBtn');
     const closeDetailBtn = $('#closeDetailBtn');
-    const adminPanelModal = $('#adminPanelModal');
-    const adminItemsList = $('#adminItemsList');
-    const closeAdminPanelBtn = $('#closeAdminPanelBtn');
     const settingsModal = $('#settingsModal');
     const darkThemeToggle = $('#darkThemeToggle');
     const closeSettingsBtn = $('#closeSettingsBtn');
     const commentFormBlock = $('#commentFormBlock');
     const commentsLockedMsg = $('#commentsLockedMsg');
-
     const postImageInput = $('#postImageInput');
     const postImagePreview = $('#postImagePreview');
     const postPreviewImg = $('#postPreviewImg');
@@ -684,6 +602,10 @@
     const commentImagePreview = $('#commentImagePreview');
     const commentPreviewImg = $('#commentPreviewImg');
     const removeCommentImageBtn = $('#removeCommentImageBtn');
+
+    let currentTab = 'home';
+    let currentPosts = [];
+    let currentPostId = null;
 
     function setupImagePreview(input, previewDiv, imgElement, removeBtn, fileRef) {
       input.addEventListener('change', (e) => {
@@ -713,22 +635,18 @@
     setupImagePreview(postImageInput, postImagePreview, postPreviewImg, removePostImageBtn, postImageFile);
     setupImagePreview(commentImageInput, commentImagePreview, commentPreviewImg, removeCommentImageBtn, commentImageFile);
 
-    let currentTab = 'home';
-    let currentPosts = [];
-    let currentPostId = null;
-    let currentComments = [];
-
     function setActiveTab(tab) {
       if (currentTab === tab) return;
       currentTab = tab;
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       document.querySelectorAll(`.nav-item[data-tab="${tab}"]`).forEach(el => el.classList.add('active'));
 
+      createPostBtn.style.display = tab === 'home' ? 'flex' : 'none';
+
       feed.classList.add('fade-out');
       setTimeout(() => {
         if (tab === 'home') loadHome();
-        else if (tab === 'rules') showRules();
-        else if (tab === 'moderation') showAdminAuth();
+        else if (tab === 'search') loadSearch();
       }, 150);
     }
 
@@ -738,18 +656,11 @@
 
     async function loadHome() {
       try {
-        const { data, error } = await supabase
-          .from('messages')
+        const { data } = await supabase
+          .from('mess_apr')
           .select('*')
-          .is('parent_id', null)
-          .eq('approved', true)
           .order('pinned', { ascending: false })
           .order('created_at', { ascending: false });
-        if (error) {
-          feed.innerHTML = '<div class="empty-message">Ошибка загрузки</div>';
-          feed.classList.remove('fade-out');
-          return;
-        }
         currentPosts = data || [];
         renderHomeFeed();
       } catch (e) {
@@ -761,7 +672,6 @@
     function renderHomeFeed() {
       if (currentPosts.length === 0) {
         feed.innerHTML = '<div class="empty-message">Пока никто ничего не рассказал...</div>';
-        feed.classList.remove('fade-out');
         return;
       }
       feed.innerHTML = currentPosts.map(post => {
@@ -782,74 +692,24 @@
       document.querySelectorAll('.post-card').forEach(card => {
         card.addEventListener('click', () => openPost(card.dataset.id));
       });
-      feed.classList.remove('fade-out');
-    }
-
-    function showRules() {
-      feed.innerHTML = `
-        <div class="rules">
-          <h2>Правила сообщества</h2>
-          <p>1. Запрещены угрозы, оскорбления и призывы к насилию.</p>
-          <p>2. Запрещён спам и реклама.</p>
-          <p>3. Уважайте чужое мнение.</p>
-          <p>4. За нарушение — бан.</p>
-        </div>
-      `;
-      feed.classList.remove('fade-out');
-    }
-
-    function animateCards(selector) {
-      document.querySelectorAll(selector).forEach((el, i) => {
-        setTimeout(() => el.classList.add('visible'), i * 50);
-      });
-    }
-
-    async function openPost(postId) {
-      currentPostId = postId;
-      let post = currentPosts.find(p => p.id === postId);
-      if (!post) {
-        const { data } = await supabase.from('messages').select('*').eq('id', postId).single();
-        post = data;
-      }
-      if (!post) return;
-      const imgHtml = post.image_url
-        ? `<img src="${escapeHtml(post.image_url)}" class="post-image" style="max-height:300px; cursor:pointer;" onclick="window.open('${escapeHtml(post.image_url)}')">`
-        : '';
-      detailPostContent.innerHTML = `
-        <div style="font-size: 18px; margin-bottom: 8px; font-weight: 500;">${escapeHtml(post.text)}</div>
-        ${imgHtml}
-        <div style="font-size: 12px; color: var(--text-secondary);">${new Date(post.created_at).toLocaleString('ru-RU')}</div>
-      `;
-      if (post.locked) {
-        commentFormBlock.style.display = 'none';
-        commentsLockedMsg.style.display = 'block';
-      } else {
-        commentFormBlock.style.display = 'block';
-        commentsLockedMsg.style.display = 'none';
-      }
-      await loadComments(postId);
-      showModal(postDetailModal);
     }
 
     async function loadComments(postId) {
-      try {
-        const { data } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('parent_id', postId)
-          .eq('approved', true)
-          .order('created_at', { ascending: true });
-        currentComments = data || [];
-      } catch { currentComments = []; }
-      renderComments();
+      const { data } = await supabase
+        .from('mess_komm')
+        .select('*')
+        .eq('parent_id', postId)
+        .eq('approved', true)
+        .order('created_at', { ascending: true });
+      renderComments(data || []);
     }
 
-    function renderComments() {
-      if (!currentComments.length) {
+    function renderComments(comments) {
+      if (!comments.length) {
         commentsList.innerHTML = '<div style="color: var(--text-secondary); margin-bottom: 12px;">Нет комментариев</div>';
         return;
       }
-      commentsList.innerHTML = currentComments.map(c => {
+      commentsList.innerHTML = comments.map(c => {
         const imgHtml = c.image_url
           ? `<img src="${escapeHtml(c.image_url)}" class="post-image" style="max-height:200px; margin-top:6px;" onclick="window.open('${escapeHtml(c.image_url)}')">`
           : '';
@@ -863,6 +723,139 @@
       }).join('');
     }
 
+    async function openPost(postId) {
+      currentPostId = postId;
+      const post = currentPosts.find(p => p.id === postId);
+      if (!post) return;
+      detailPostContent.innerHTML = `
+        <div style="font-size: 18px; margin-bottom: 8px; font-weight: 500;">${escapeHtml(post.text)}</div>
+        ${post.image_url ? `<img src="${escapeHtml(post.image_url)}" class="post-image" style="max-height:300px; cursor:pointer;" onclick="window.open('${escapeHtml(post.image_url)}')">` : ''}
+        <div style="font-size: 12px; color: var(--text-secondary);">${new Date(post.created_at).toLocaleString('ru-RU')}</div>
+      `;
+      await loadComments(postId);
+      showModal(postDetailModal);
+    }
+
+    // ========== ВКЛАДКА "НАЙТИ" ==========
+    function loadSearch() {
+      feed.innerHTML = `
+        <div class="search-blocks" id="searchBlocks">
+          <div class="search-block" data-block="events">
+            <div class="block-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="block-title">Ближайшие события</div>
+          </div>
+          <div class="search-block" data-block="news">
+            <div class="block-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+            </div>
+            <div class="block-title">Новости дня</div>
+          </div>
+          <div class="search-block" data-block="rules">
+            <div class="block-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="block-title">Правила</div>
+          </div>
+          <div class="search-block" data-block="docs">
+            <div class="block-icon">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="block-title">Документация</div>
+          </div>
+        </div>
+      `;
+      animateCards('.search-block');
+      
+      document.querySelectorAll('.search-block').forEach(block => {
+        block.addEventListener('click', () => {
+          const type = block.dataset.block;
+          if (type === 'events') showEvents();
+          else if (type === 'news') showDailyNews();
+          else if (type === 'rules') showRules();
+          else if (type === 'docs') showDocs();
+        });
+      });
+      feed.classList.remove('fade-out');
+    }
+
+    async function showEvents() {
+      const { data: events } = await supabase.from('events').select('*').order('created_at', { ascending: false });
+      feed.innerHTML = events && events.length > 0 ? events.map(e => `
+        <div class="post-card visible" style="cursor:pointer;">
+          <div class="post-text" style="font-weight: 600;">${escapeHtml(e.title)}</div>
+          <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(e.short_desc)}</div>
+          <div class="event-detail" style="display: none; margin-top: 10px;">
+            ${e.image_url ? `<img src="${escapeHtml(e.image_url)}" class="post-image" style="max-height:250px;">` : ''}
+            <div style="margin-top: 10px;">${escapeHtml(e.full_desc)}</div>
+          </div>
+        </div>
+      `).join('') : '<div class="empty-message">Пока нет событий</div>';
+
+      document.querySelectorAll('.post-card').forEach(card => {
+        card.addEventListener('click', function() {
+          const detail = this.querySelector('.event-detail');
+          if (detail.style.display === 'none') {
+            detail.style.display = 'block';
+            detail.style.animation = 'fadeIn 0.3s ease';
+          } else {
+            detail.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    async function showDailyNews() {
+      const { data } = await supabase.from('daily_news').select('*').limit(1).single();
+      if (data) {
+        feed.innerHTML = `
+          <div class="post-card visible">
+            ${data.image_url ? `<img src="${escapeHtml(data.image_url)}" class="post-image">` : ''}
+            <div class="post-text" style="font-weight: 600;">${escapeHtml(data.title || '')}</div>
+            <div style="font-size: 14px; color: var(--text-secondary);">${escapeHtml(data.short_desc || '')}</div>
+          </div>
+        `;
+      } else {
+        feed.innerHTML = '<div class="empty-message">Новостей пока нет</div>';
+      }
+    }
+
+    function showRules() {
+      feed.innerHTML = `
+        <div class="rules">
+          <h2>Правила сообщества</h2>
+          <p>1. Запрещены угрозы жизни и здоровью людей.</p>
+          <p>2. Запрещено разжигание межнациональной розни.</p>
+          <p>3. Запрещена пропаганда наркотиков и алкоголя.</p>
+          <p>4. Запрещён спам и реклама сторонних ресурсов.</p>
+          <p>5. Запрещено выдавать себя за администрацию.</p>
+          <p>6. Уважайте чужое мнение и личные границы.</p>
+          <p>7. Запрещено публиковать личные данные других людей.</p>
+          <p>8. За мат и оскорбления — бан без предупреждения.</p>
+          <p>9. Администрация оставляет за собой право удалять любой контент.</p>
+          <p>10. Нарушение правил ведёт к блокировке доступа.</p>
+        </div>
+      `;
+    }
+
+    function showDocs() {
+      feed.innerHTML = `
+        <div class="rules">
+          <h2>Документация</h2>
+          <p><strong>⚡ Энергия Вещает</strong> — это независимый школьный проект, созданный для анонимного общения учеников школы №2070.</p>
+          <p>Проект не имеет никакого отношения к официальному Telegram-каналу «Энергия Вещает», администрации школы, учителям или любым другим официальным структурам.</p>
+          <p>Все совпадения с названиями случайны. Проект использует открытые технологии и не хранит персональные данные пользователей, кроме технической информации, необходимой для предотвращения нарушений (IP-адрес, fingerprint браузера).</p>
+          <p>Администрация проекта не несёт ответственности за содержание сообщений, публикуемых пользователями. Каждый автор самостоятельно несёт ответственность за написанное.</p>
+          <p>При обнаружении нарушений просьба обращаться к администратору через встроенные средства модерации или лично.</p>
+          <p>Проект работает на безвозмездной основе, не собирает пожертвований и не размещает рекламу.</p>
+          <p>Дата основания: 2025 год. Все права на дизайн и код принадлежат создателю проекта.</p>
+          <p>Используемое ПО: Supabase (база данных), Netlify (хостинг), иконки из открытых источников.</p>
+          <p>Спасибо, что вы с нами! 💙</p>
+        </div>
+      `;
+    }
+
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
@@ -871,195 +864,10 @@
 
     function showModal(m) { m.classList.add('active'); }
     function hideModal(m) { m.classList.remove('active'); }
-
-    function showAdminAuth() {
-      adminPassInput.value = '';
-      showModal(adminModal);
-      adminPassInput.focus();
-    }
-
-    async function refreshCurrentFeed() {
-      if (currentTab === 'home') await loadHome();
-    }
-
-    async function showAdminPanel() {
-      adminItemsList.innerHTML = '<div style="color:var(--text-secondary);">Загрузка...</div>';
-      showModal(adminPanelModal);
-
-      try {
-        const [unapprovedRes, approvedRes] = await Promise.all([
-          supabase.from('messages').select('*').eq('approved', false).order('created_at', { ascending: false }),
-          supabase.from('messages').select('*').eq('approved', true).is('parent_id', null).order('created_at', { ascending: false })
-        ]);
-
-        const unapproved = unapprovedRes.data || [];
-        const approvedPosts = approvedRes.data || [];
-
-        const parentIds = [...new Set(unapproved.filter(item => item.parent_id).map(item => item.parent_id))];
-        let parentPostsMap = {};
-        if (parentIds.length > 0) {
-          const { data: parents } = await supabase
-            .from('messages')
-            .select('id, text, created_at')
-            .in('id', parentIds);
-          if (parents) {
-            parents.forEach(p => { parentPostsMap[p.id] = p; });
-          }
-        }
-
-        adminItemsList.innerHTML = '';
-
-        if (unapproved.length > 0) {
-          const sectionTitle = document.createElement('div');
-          sectionTitle.style.fontWeight = '600';
-          sectionTitle.style.marginBottom = '8px';
-          sectionTitle.textContent = '📥 На модерации';
-          adminItemsList.appendChild(sectionTitle);
-
-          for (const item of unapproved) {
-            const div = document.createElement('div');
-            div.className = 'admin-item';
-            div.style.border = '1px solid var(--border)';
-            div.style.borderRadius = '12px';
-            div.style.padding = '12px';
-            div.style.marginBottom = '8px';
-            div.style.background = 'var(--card)';
-            const imgHtml = item.image_url
-              ? `<div><img src="${escapeHtml(item.image_url)}" style="max-width:200px; max-height:150px; border-radius:8px; margin-top:6px;"/></div>`
-              : '';
-
-            let parentInfo = '';
-            if (item.parent_id && parentPostsMap[item.parent_id]) {
-              const p = parentPostsMap[item.parent_id];
-              parentInfo = `
-                <div style="font-size:12px; color:var(--primary); margin-top:4px; background:var(--input-bg); padding:6px; border-radius:8px;">
-                  <strong>К посту:</strong> ${escapeHtml(p.text).substring(0, 80)}
-                  <span style="display:block; font-size:10px; color:var(--text-secondary);">${new Date(p.created_at).toLocaleString('ru-RU')}</span>
-                </div>
-              `;
-            } else if (item.parent_id) {
-              parentInfo = '<div style="font-size:12px; color:var(--text-secondary);">(пост удалён)</div>';
-            }
-
-            div.innerHTML = `
-              <div style="font-weight:600;">${item.parent_id ? '💬 Комментарий' : '📝 Пост'}</div>
-              <div>${escapeHtml(item.text)}</div>
-              ${imgHtml}
-              ${parentInfo}
-              <div style="font-size:12px; color:var(--text-secondary);">${new Date(item.created_at).toLocaleString('ru-RU')}</div>
-              <div class="submitter-info" style="margin-top:6px; font-size:12px; background:var(--input-bg); padding:8px; border-radius:8px;">
-                <div><strong>IP:</strong> ${item.submitter_ip || '—'}
-                  <button class="btn btn-secondary copy-btn" data-text="${item.submitter_ip || ''}" style="font-size:11px; padding:2px 8px; margin-left:6px;">Скопировать</button>
-                  <button class="btn btn-danger ban-ip-btn" style="font-size:11px; padding:2px 8px; margin-left:4px;">🚫 Забанить IP</button>
-                </div>
-                <div><strong>User-Agent:</strong> ${item.submitter_ua || '—'}</div>
-                <div><strong>Fingerprint:</strong> ${item.submitter_fingerprint || '—'}
-                  <button class="btn btn-secondary copy-btn" data-text="${item.submitter_fingerprint || ''}" style="font-size:11px; padding:2px 8px; margin-left:6px;">Скопировать</button>
-                </div>
-              </div>
-              <div style="display:flex; gap:8px; margin-top:10px;">
-                <button class="btn btn-success approve-btn">Одобрить</button>
-                <button class="btn btn-danger delete-btn">Удалить</button>
-              </div>
-            `;
-            adminItemsList.appendChild(div);
-
-            div.querySelector('.approve-btn').addEventListener('click', async () => {
-              await supabase.from('messages').update({ approved: true }).eq('id', item.id);
-              await showAdminPanel();
-              await refreshCurrentFeed();
-            });
-            div.querySelector('.delete-btn').addEventListener('click', async () => {
-              if (item.image_url) {
-                const url = new URL(item.image_url);
-                const pathParts = url.pathname.split('/');
-                const fileName = pathParts[pathParts.length - 1];
-                await supabase.storage.from(BUCKET_NAME).remove([fileName]);
-              }
-              await supabase.from('messages').delete().eq('id', item.id);
-              await showAdminPanel();
-              await refreshCurrentFeed();
-            });
-            const banBtn = div.querySelector('.ban-ip-btn');
-            if (banBtn) {
-              banBtn.addEventListener('click', async () => {
-                const ip = item.submitter_ip;
-                if (ip && ip !== 'неизвестно') {
-                  await banIp(ip);
-                  alert(`IP ${ip} забанен.`);
-                } else alert('Нет IP');
-              });
-            }
-          }
-        } else {
-          const empty = document.createElement('div');
-          empty.textContent = 'Нет непроверенных записей';
-          empty.style.color = 'var(--text-secondary)';
-          adminItemsList.appendChild(empty);
-        }
-
-        if (approvedPosts.length > 0) {
-          const divider = document.createElement('hr');
-          divider.style.margin = '20px 0';
-          divider.style.border = '1px solid var(--border)';
-          adminItemsList.appendChild(divider);
-
-          const manageTitle = document.createElement('div');
-          manageTitle.style.fontWeight = '600';
-          manageTitle.style.marginBottom = '8px';
-          manageTitle.textContent = '📌 Управление постами';
-          adminItemsList.appendChild(manageTitle);
-
-          for (const post of approvedPosts) {
-            const div = document.createElement('div');
-            div.className = 'manage-item';
-            div.style.border = '1px solid var(--border)';
-            div.style.borderRadius = '12px';
-            div.style.padding = '12px';
-            div.style.marginBottom = '8px';
-            div.style.background = 'var(--card)';
-            div.innerHTML = `
-              <div style="font-weight:600;">${post.pinned ? '📌 Закреплено' : '📝 Пост'} ${post.locked ? '🔒' : ''}</div>
-              <div>${escapeHtml(post.text).substring(0, 100)}</div>
-              <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                <button class="btn ${post.pinned ? 'btn-secondary' : 'btn-success'} toggle-pin-btn" data-id="${post.id}" data-pinned="${post.pinned}">
-                  ${post.pinned ? 'Открепить' : 'Закрепить'}
-                </button>
-                <button class="btn ${post.locked ? 'btn-success' : 'btn-secondary'} toggle-lock-btn" data-id="${post.id}" data-locked="${post.locked}">
-                  ${post.locked ? 'Разрешить комменты' : 'Запретить комменты'}
-                </button>
-              </div>
-            `;
-            adminItemsList.appendChild(div);
-
-            div.querySelector('.toggle-pin-btn').addEventListener('click', async () => {
-              const newPinned = !(post.pinned);
-              await supabase.from('messages').update({ pinned: newPinned }).eq('id', post.id);
-              post.pinned = newPinned;
-              await showAdminPanel();
-              await refreshCurrentFeed();
-            });
-            div.querySelector('.toggle-lock-btn').addEventListener('click', async () => {
-              const newLocked = !(post.locked);
-              await supabase.from('messages').update({ locked: newLocked }).eq('id', post.id);
-              post.locked = newLocked;
-              await showAdminPanel();
-            });
-          }
-        }
-
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const text = btn.dataset.text;
-            if (text) navigator.clipboard.writeText(text).then(() => {
-              btn.textContent = 'Скопировано!';
-              setTimeout(() => btn.textContent = 'Скопировать', 1500);
-            });
-          });
-        });
-      } catch (e) {
-        adminItemsList.innerHTML = '<div style="color:red;">Ошибка загрузки данных модерации</div>';
-      }
+    function animateCards(selector) {
+      document.querySelectorAll(selector).forEach((el, i) => {
+        setTimeout(() => el.classList.add('visible'), i * 50);
+      });
     }
 
     createPostBtn.addEventListener('click', () => {
@@ -1073,75 +881,30 @@
 
     settingsBtn.addEventListener('click', () => showModal(settingsModal));
 
-    submitAdminBtn.addEventListener('click', () => {
-      if (adminPassInput.value === ADMIN_PASSWORD) {
-        hideModal(adminModal);
-        showAdminPanel();
-      } else alert('Неверный пароль');
-    });
-    cancelAdminBtn.addEventListener('click', () => hideModal(adminModal));
-
-    // ========== ИСПРАВЛЕННАЯ ОТПРАВКА ПОСТА ==========
     submitPostBtn.addEventListener('click', async () => {
       const text = newPostText.value.trim();
       if (!text && !postImageFile.current) {
         alert('Напишите текст или добавьте фото');
         return;
       }
-      
       submitPostBtn.disabled = true;
       submitPostBtn.textContent = 'Отправка...';
-      
       try {
         const ip = await getIp();
-        if (await isIpBanned(ip)) {
-          alert('Вы забанены');
-          submitPostBtn.disabled = false;
-          submitPostBtn.textContent = 'Отправить анонимно';
-          return;
-        }
-        
         let imageUrl = null;
         if (postImageFile.current) {
-          try {
-            imageUrl = await uploadImage(postImageFile.current);
-          } catch (e) {
-            alert(e.message);
-            submitPostBtn.disabled = false;
-            submitPostBtn.textContent = 'Отправить анонимно';
-            return;
-          }
+          imageUrl = await uploadImage(postImageFile.current);
         }
-        
-        const info = { ip, ua: navigator.userAgent, fingerprint: getFingerprint() };
-        
-        const { error: insertError } = await supabase.from('messages').insert([{
+        await supabase.from('mess_notapr').insert([{
           text: text || '',
-          approved: false,
-          submitter_ip: info.ip,
-          submitter_ua: info.ua,
-          submitter_fingerprint: info.fingerprint,
-          image_url: imageUrl
+          image_url: imageUrl,
+          submitter_ip: ip,
+          submitter_ua: navigator.userAgent,
+          submitter_fingerprint: getFingerprint()
         }]);
-        
-        if (insertError) {
-          alert('Ошибка при сохранении поста: ' + insertError.message);
-          submitPostBtn.disabled = false;
-          submitPostBtn.textContent = 'Отправить анонимно';
-          return;
-        }
-        
-        newPostText.value = '';
-        postImageFile.current = null;
-        postImageInput.value = '';
-        postImagePreview.style.display = 'none';
-        
         hideModal(createPostModal);
-        
-        if (currentTab === 'home') loadHome();
-        
       } catch (e) {
-        alert('Ошибка сети при отправке поста');
+        alert('Ошибка сети');
       } finally {
         submitPostBtn.disabled = false;
         submitPostBtn.textContent = 'Отправить анонимно';
@@ -1149,86 +912,38 @@
     });
     cancelPostBtn.addEventListener('click', () => hideModal(createPostModal));
 
-    // ========== ИСПРАВЛЕННАЯ ОТПРАВКА КОММЕНТАРИЯ ==========
     submitCommentBtn.addEventListener('click', async () => {
       const text = newCommentText.value.trim();
-      if (!text && !commentImageFile.current) {
-        alert('Напишите текст или добавьте фото');
-        return;
-      }
-      
+      if (!text && !commentImageFile.current) return;
       submitCommentBtn.disabled = true;
-      submitCommentBtn.textContent = 'Отправка...';
-      
       try {
         const ip = await getIp();
-        if (await isIpBanned(ip)) {
-          alert('Вы забанены');
-          submitCommentBtn.disabled = false;
-          submitCommentBtn.textContent = 'Отправить';
-          return;
-        }
-        
-        const { data: parentPost } = await supabase
-          .from('messages')
-          .select('locked')
-          .eq('id', currentPostId)
-          .single();
-        
-        if (parentPost && parentPost.locked) {
-          alert('Комментарии к этому посту отключены');
-          submitCommentBtn.disabled = false;
-          submitCommentBtn.textContent = 'Отправить';
-          return;
-        }
-        
         let imageUrl = null;
         if (commentImageFile.current) {
-          try {
-            imageUrl = await uploadImage(commentImageFile.current);
-          } catch (e) {
-            alert(e.message);
-            submitCommentBtn.disabled = false;
-            submitCommentBtn.textContent = 'Отправить';
-            return;
-          }
+          imageUrl = await uploadImage(commentImageFile.current);
         }
-        
-        const info = { ip, ua: navigator.userAgent, fingerprint: getFingerprint() };
-        
-        const { error: insertError } = await supabase.from('messages').insert([{
+        await supabase.from('mess_komm').insert([{
           text: text || '',
           parent_id: currentPostId,
           approved: false,
-          submitter_ip: info.ip,
-          submitter_ua: info.ua,
-          submitter_fingerprint: info.fingerprint,
-          image_url: imageUrl
+          image_url: imageUrl,
+          submitter_ip: ip,
+          submitter_ua: navigator.userAgent,
+          submitter_fingerprint: getFingerprint()
         }]);
-        
-        if (insertError) {
-          alert('Ошибка при сохранении комментария: ' + insertError.message);
-          submitCommentBtn.disabled = false;
-          submitCommentBtn.textContent = 'Отправить';
-          return;
-        }
-        
         newCommentText.value = '';
         commentImageFile.current = null;
         commentImageInput.value = '';
         commentImagePreview.style.display = 'none';
-        
         loadComments(currentPostId);
-        
       } catch (e) {
-        alert('Ошибка сети при отправке комментария');
+        alert('Ошибка сети');
       } finally {
         submitCommentBtn.disabled = false;
         submitCommentBtn.textContent = 'Отправить';
       }
     });
     closeDetailBtn.addEventListener('click', () => hideModal(postDetailModal));
-    closeAdminPanelBtn.addEventListener('click', () => hideModal(adminPanelModal));
 
     darkThemeToggle.addEventListener('change', (e) => {
       document.body.classList.toggle('dark-theme', e.target.checked);
@@ -1248,7 +963,7 @@
     (async function init() {
       const allowed = await checkGeo();
       if (allowed) {
-        loadHome();
+        setActiveTab('home');
       }
     })();
   </script>
